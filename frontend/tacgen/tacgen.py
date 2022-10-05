@@ -121,6 +121,10 @@ class TACGen(Visitor[FuncVisitor, None]):
 
         op = {
             node.BinaryOp.Add: tacop.BinaryOp.ADD,
+            node.BinaryOp.Sub: tacop.BinaryOp.SUB,
+            node.BinaryOp.Mul: tacop.BinaryOp.MUL,
+            node.BinaryOp.Div: tacop.BinaryOp.DIV,
+            node.BinaryOp.Mod: tacop.BinaryOp.REM,
             # You can add binary operations here.
         }[expr.op]
         expr.setattr(
