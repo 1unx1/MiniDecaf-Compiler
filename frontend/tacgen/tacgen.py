@@ -1,4 +1,3 @@
-from cmath import exp
 import utils.riscv as riscv
 from frontend.ast import node
 from frontend.ast.tree import *
