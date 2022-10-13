@@ -51,4 +51,5 @@ class CFG:
     def dfs(self, root):
         self.reachable[root] = True
         for child in self.getSucc(root):
-            self.dfs(child)
+            if not self.reachable[child]:
+                self.dfs(child)
