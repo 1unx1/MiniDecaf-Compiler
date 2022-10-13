@@ -115,6 +115,93 @@ def p_while(p):
     p[0] = While(p[3], p[5])
 
 
+def p_for_000(p):
+    """
+    statement_matched : For LParen Semi Semi RParen statement_matched
+    statement_unmatched : For LParen Semi Semi RParen statement_unmatched
+    """
+    p[0] = For(body=p[6])
+
+
+def p_for_100(p):
+    """
+    statement_matched : For LParen expression Semi Semi RParen statement_matched
+    statement_matched : For LParen declaration Semi Semi RParen statement_matched
+    statement_unmatched : For LParen expression Semi Semi RParen statement_unmatched
+    statement_unmatched : For LParen declaration Semi Semi RParen statement_unmatched
+    """
+    p[0] = For(body=p[7], init=p[3])
+
+
+def p_for_010(p):
+    """
+    statement_matched : For LParen Semi expression Semi RParen statement_matched
+    statement_unmatched : For LParen Semi expression Semi RParen statement_unmatched
+    """
+    p[0] = For(body=p[7], cond=p[4])
+
+
+def p_for_001(p):
+    """
+    statement_matched : For LParen Semi Semi expression RParen statement_matched
+    statement_unmatched : For LParen Semi Semi expression RParen statement_unmatched
+    """
+    p[0] = For(body=p[7], update=p[5])
+
+
+def p_for_110(p):
+    """
+    statement_matched : For LParen expression Semi expression Semi RParen statement_matched
+    statement_matched : For LParen declaration Semi expression Semi RParen statement_matched
+    statement_unmatched : For LParen expression Semi expression Semi RParen statement_unmatched
+    statement_unmatched : For LParen declaration Semi expression Semi RParen statement_unmatched
+    """
+    p[0] = For(body=p[8], init=p[3], cond=p[5])
+
+
+def p_for_101(p):
+    """
+    statement_matched : For LParen expression Semi Semi expression RParen statement_matched
+    statement_matched : For LParen declaration Semi Semi expression RParen statement_matched
+    statement_unmatched : For LParen expression Semi Semi expression RParen statement_unmatched
+    statement_unmatched : For LParen declaration Semi Semi expression RParen statement_unmatched
+    """
+    p[0] = For(body=p[8], init=p[3], update=p[6])
+
+
+def p_for_011(p):
+    """
+    statement_matched : For LParen Semi expression Semi expression RParen statement_matched
+    statement_unmatched : For LParen Semi expression Semi expression RParen statement_unmatched 
+    """
+    p[0] = For(body=p[8], cond=p[4], update=p[6])
+
+
+def p_for_111(p):
+    """
+    statement_matched : For LParen expression Semi expression Semi expression RParen statement_matched
+    statement_matched : For LParen declaration Semi expression Semi expression RParen statement_matched
+    statement_unmatched : For LParen expression Semi expression Semi expression RParen statement_unmatched
+    statement_unmatched : For LParen declaration Semi expression Semi expression RParen statement_unmatched
+    """
+    p[0] = For(body=p[9], init=p[3], cond=p[5], update=p[7])
+
+
+def p_do_while(p):
+    """
+    statement_matched : Do statement_matched While LParen expression RParen Semi
+    statement_unmatched : Do statement_unmatched While LParen expression RParen Semi
+    """
+    p[0] = DoWhile(p[2], p[5])
+
+
+def p_continue(p):
+    """
+    statement_matched : Continue Semi
+    """
+    p[0] = Continue()
+
+
 def p_return(p):
     """
     statement_matched : Return expression Semi
