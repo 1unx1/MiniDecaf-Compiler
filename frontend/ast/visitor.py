@@ -4,7 +4,6 @@ Module that defines the base type of visitor.
 
 
 from __future__ import annotations
-from ast import Continue
 
 from typing import Callable, Protocol, Sequence, TypeVar
 

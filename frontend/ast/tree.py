@@ -5,7 +5,6 @@ Modify this file if you want to add a new AST node.
 """
 
 from __future__ import annotations
-from curses.ascii import NUL
 
 from typing import Any, Generic, Optional, TypeVar, Union
 
