@@ -1,3 +1,4 @@
+from re import search
 from backend.dataflow.basicblock import BasicBlock
 
 """
@@ -40,3 +41,14 @@ class CFG:
 
     def iterator(self):
         return iter(self.nodes)
+
+    def unreachable(self, id):
+        return not self.dfs(id, 0)
+
+    def dfs(self, dst, src):
+        if dst == src:
+            return True
+        for succ in self.getSucc(src):
+            if self.dfs(dst, succ):
+                return True
+        return False
