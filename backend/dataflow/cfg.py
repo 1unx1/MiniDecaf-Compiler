@@ -24,6 +24,9 @@ class CFG:
             self.links[u][1].add(v)
             self.links[v][0].add(u)
 
+        self.reachable = [False for _ in range(len(nodes))]
+        self.dfs(0)
+
     def getBlock(self, id):
         return self.nodes[id]
 
@@ -43,12 +46,9 @@ class CFG:
         return iter(self.nodes)
 
     def unreachable(self, id):
-        return not self.dfs(id, 0)
+        return not self.reachable[id]
 
-    def dfs(self, dst, src):
-        if dst == src:
-            return True
-        for succ in self.getSucc(src):
-            if self.dfs(dst, succ):
-                return True
-        return False
+    def dfs(self, root):
+        self.reachable[root] = True
+        for child in self.getSucc(root):
+            self.dfs(child)
