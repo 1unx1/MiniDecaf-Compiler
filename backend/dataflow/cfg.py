@@ -1,4 +1,3 @@
-from re import search
 from backend.dataflow.basicblock import BasicBlock
 
 """
