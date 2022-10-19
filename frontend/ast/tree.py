@@ -178,16 +178,11 @@ class For(Statement):
     """
 
     def __init__(
-        self,
-        body: Statement,
-        init: Optional[Declaration | Expression] = None,
-        cond: Optional[Expression] = None,
-        update: Optional[Expression] = None,
-        ) -> None:
+        self, init: Declaration | Expression, cond: Expression, update: Expression, body: Statement) -> None:
         super().__init__('for')
-        self.init = init or NULL
-        self.cond = cond or IntLiteral(1)
-        self.update = update or NULL
+        self.init = init
+        self.cond = cond if not cond is NULL else IntLiteral(1)
+        self.update = update
         self.body = body
 
     def __getitem__(self, key: int) -> Node:
