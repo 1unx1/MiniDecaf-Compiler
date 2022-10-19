@@ -187,7 +187,7 @@ class For(Statement):
         super().__init__('for')
         self.init = init or NULL
         self.cond = cond or IntLiteral(1)
-        self.update = update or NULL 
+        self.update = update or NULL
         self.body = body
 
     def __getitem__(self, key: int) -> Node:
