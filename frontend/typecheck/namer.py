@@ -36,11 +36,29 @@ class Namer(Visitor[ScopeStack, None]):
         # Check if the 'main' function is missing
         if not program.hasMainFunc():
             raise DecafNoMainFuncError
-
-        program.mainFunc().accept(self, ctx)
+        for func in program.functions().values():
+            func.accept(self, ctx)
 
     def visitFunction(self, func: Function, ctx: ScopeStack) -> None:
+        if ctx.findConflict(func.ident.value):
+            raise DecafDeclConflictError(func.ident.value)
+        funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope())
+        ctx.declare(funcSymbol)
+        for param in func.params:
+            param.accept(self, ctx)
         func.body.accept(self, ctx)
+
+    def visitParameter(self, param: Parameter, ctx: ScopeStack) -> None:
+        if ctx.findConflict(param.ident.value):
+            raise DecafDeclConflictError(param.ident.value)
+        symbol = VarSymbol(param.ident.value, param.var_t.type)
+        ctx.declare(symbol)
+        param.setattr('symbol', symbol)
+
+    def visitCall(self, call: Call, ctx: ScopeStack) -> None:
+        call.ident.accept(self, ctx)
+        for argument in call.argument_list:
+            argument.accept(self, ctx)
 
     def visitBlock(self, block: Block, ctx: ScopeStack) -> None:
         ctx.open(Scope(ScopeKind.LOCAL))
@@ -132,8 +150,6 @@ class Namer(Visitor[ScopeStack, None]):
         """
         1. Refer to the implementation of visitBinary.
         """
-        if not ctx.lookup(expr.lhs.value):
-            raise DecafUndefinedVarError(expr.lhs.value)
         expr.lhs.accept(self, ctx)
         expr.rhs.accept(self, ctx)
 
@@ -160,7 +176,9 @@ class Namer(Visitor[ScopeStack, None]):
         """
         symbol = ctx.lookup(ident.value)
         if not symbol:
-            raise DecafUndefinedVarError(ident.value)
+            if (isinstance(symbol, VarSymbol)):
+                raise DecafUndefinedVarError(ident.value)
+            raise DecafUndefinedFuncError(ident.value)
         ident.setattr('symbol', symbol)
 
     def visitIntLiteral(self, expr: IntLiteral, ctx: ScopeStack) -> None:

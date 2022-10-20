@@ -55,9 +55,55 @@ def p_type(p):
 
 def p_function_def(p):
     """
-    function : type Identifier LParen RParen LBrace block RBrace
+    function : type Identifier LParen params RParen LBrace block RBrace
     """
-    p[0] = Function(p[1], p[2], p[6])
+    p[0] = Function(p[1], p[2], p[4], p[6])
+
+
+def p_params(p):
+    """
+    params : params parameter
+    """
+    if p[2] is not NULL:
+        p[1].append(p[2])
+    p[0] = p[1]
+
+
+def p_params_emtpy(p):
+    """
+    params : empty
+    """
+    return []
+
+
+def p_parameter(p):
+    """
+    parameter : type Identifier
+    """
+    p[0] = Parameter(p[1], p[2])
+
+
+def p_call(p):
+    """
+    call : Identifier argument_list
+    """
+    p[0] = Call(p[1], p[2])
+
+
+def p_argument_list(p):
+    """
+    argument_list : argument_list expression
+    """
+    if p[2] is not NULL:
+        p[1].append(p[2])
+    p[0] = p[1]
+
+
+def p_argument_list_empty(p):
+    """
+    argument_list : emtpy
+    """
+    return []
 
 
 def p_block(p):

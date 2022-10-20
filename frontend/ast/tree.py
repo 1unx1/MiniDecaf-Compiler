@@ -75,25 +75,68 @@ class Function(Node):
         self,
         ret_t: TypeLiteral,
         ident: Identifier,
+        params: list[Parameter],
         body: Block,
     ) -> None:
         super().__init__("function")
         self.ret_t = ret_t
         self.ident = ident
+        self.params = params
         self.body = body
 
     def __getitem__(self, key: int) -> Node:
         return (
             self.ret_t,
             self.ident,
+            self.params,
             self.body,
         )[key]
 
     def __len__(self) -> int:
-        return 3
+        return 4
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitFunction(self, ctx)
+
+
+class Parameter(Node):
+    """
+    AST node that represents a parameter.
+    """
+
+    def __init__(self, var_t: TypeLiteral, ident: Identifier) -> None:
+        super().__init__('parameter')
+        self.var_t = var_t
+        self.ident = ident
+
+    def __getitem__(self, key: int) -> Node:
+        return (self.var_t, self.ident)[key]
+
+    def __len__(self) -> int:
+        return 2
+
+    def accept(self, v: Visitor[T, U], ctx: T):
+        return v.visitParameter(self, ctx)
+
+
+class Call(Node):
+    """
+    AST node that represents a function call.
+    """
+
+    def __init__(self, ident: Identifier, argument_list: list[Expression]) -> None:
+        super().__init__('call')
+        self.ident = ident
+        self.argument_list = argument_list
+
+    def __getitem__(self, key: int) -> Node:
+        return (self.ident, self.argument_list)[key]
+
+    def __len__(self) -> int:
+        return 2
+
+    def accept(self, v: Visitor[T, U], ctx: T):
+        return v.visitCall(self, ctx)
 
 
 class Statement(Node):
