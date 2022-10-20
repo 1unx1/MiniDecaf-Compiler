@@ -132,8 +132,6 @@ class Namer(Visitor[ScopeStack, None]):
         """
         1. Refer to the implementation of visitBinary.
         """
-        if not ctx.lookup(expr.lhs.value):
-            raise DecafUndefinedVarError(expr.lhs.value)
         expr.lhs.accept(self, ctx)
         expr.rhs.accept(self, ctx)
 
