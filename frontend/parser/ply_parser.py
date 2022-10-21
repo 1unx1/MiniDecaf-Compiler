@@ -112,7 +112,7 @@ def p_argument_list(p):
 
 def p_argument_list_empty(p):
     """
-    argument_list : emtpy
+    argument_list : empty
     """
     p[0] = []
 
