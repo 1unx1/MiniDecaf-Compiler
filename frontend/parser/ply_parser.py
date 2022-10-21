@@ -55,25 +55,38 @@ def p_type(p):
 
 def p_function_def(p):
     """
-    function : type Identifier LParen params RParen LBrace block RBrace
+    function : type Identifier LParen parameter_list RParen LBrace block RBrace
     """
     p[0] = Function(p[1], p[2], p[4], p[6])
 
 
-def p_params(p):
+def p_parameter_list(p):
     """
-    params : params parameter
+    parameter_list : parameter_list_nonempty
     """
-    if p[2] is not NULL:
-        p[1].append(p[2])
     p[0] = p[1]
 
 
-def p_params_emtpy(p):
+def p_parameter_list_emtpy(p):
     """
-    params : empty
+    parameter_list : empty
     """
-    return []
+    p[0] = []
+
+
+def p_parameter_list_nonempty(p):
+    """
+    parameter_list_nonempty : parameter_list_nonempty Comma parameter
+    """
+    p[1].append(p[3])
+    p[0] = p[1]
+
+
+def p_parameter_list_one(p):
+    """
+    parameter_list_nonempty : parameter
+    """
+    p[0] = [p[1]]
 
 
 def p_parameter(p):
@@ -85,17 +98,15 @@ def p_parameter(p):
 
 def p_call(p):
     """
-    call : Identifier argument_list
+    statement_matched : Identifier LParen argument_list RParen Semi
     """
     p[0] = Call(p[1], p[2])
 
 
 def p_argument_list(p):
     """
-    argument_list : argument_list expression
+    argument_list : argument_list_nonempty
     """
-    if p[2] is not NULL:
-        p[1].append(p[2])
     p[0] = p[1]
 
 
@@ -103,7 +114,22 @@ def p_argument_list_empty(p):
     """
     argument_list : emtpy
     """
-    return []
+    p[0] = []
+
+
+def p_argument_list_nonempty(p):
+    """
+    argument_list_nonempty : argument_list_nonempty Comma expression
+    """
+    p[1].append(p[3])
+    p[0] = p[1]
+
+
+def p_argument_list_one(p):
+    """
+    argument_list_nonempty : expression
+    """
+    p[0] = [p[1]]
 
 
 def p_block(p):

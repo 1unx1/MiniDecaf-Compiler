@@ -44,9 +44,11 @@ class Namer(Visitor[ScopeStack, None]):
             raise DecafDeclConflictError(func.ident.value)
         funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope())
         ctx.declare(funcSymbol)
-        for param in func.params:
+        ctx.open(Scope(ScopeKind.LOCAL))
+        for param in func.parameter_list:
             param.accept(self, ctx)
         func.body.accept(self, ctx)
+        ctx.close()
 
     def visitParameter(self, param: Parameter, ctx: ScopeStack) -> None:
         if ctx.findConflict(param.ident.value):
@@ -69,7 +71,6 @@ class Namer(Visitor[ScopeStack, None]):
     def visitReturn(self, stmt: Return, ctx: ScopeStack) -> None:
         stmt.expr.accept(self, ctx)
 
-        
     def visitFor(self, stmt: For, ctx: ScopeStack) -> None:
         """
         1. Open a local scope for stmt.init.
@@ -89,7 +90,6 @@ class Namer(Visitor[ScopeStack, None]):
         ctx.closeLoop()
         ctx.close()
 
-
     def visitIf(self, stmt: If, ctx: ScopeStack) -> None:
         stmt.cond.accept(self, ctx)
         stmt.then.accept(self, ctx)
@@ -103,7 +103,6 @@ class Namer(Visitor[ScopeStack, None]):
         ctx.openLoop()
         stmt.body.accept(self, ctx)
         ctx.closeLoop()
-
         
     def visitDoWhile(self, stmt: DoWhile, ctx: ScopeStack) -> None:
         """
@@ -117,11 +116,9 @@ class Namer(Visitor[ScopeStack, None]):
         ctx.closeLoop()
         stmt.cond.accept(self, ctx)
 
-
     def visitBreak(self, stmt: Break, ctx: ScopeStack) -> None:
         if not ctx.inLoop():
             raise DecafBreakOutsideLoopError()
-
 
     def visitContinue(self, stmt: Continue, ctx: ScopeStack) -> None:
         """
@@ -129,7 +126,6 @@ class Namer(Visitor[ScopeStack, None]):
         """
         if not ctx.inLoop():
             raise DecafContinueOutsideLoopError()
-
 
     def visitDeclaration(self, decl: Declaration, ctx: ScopeStack) -> None:
         """
