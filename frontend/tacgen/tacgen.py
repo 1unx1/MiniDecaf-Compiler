@@ -24,6 +24,8 @@ class TACGen(Visitor[FuncVisitor, None]):
         pw = ProgramWriter([func for func in program.functions()])
         for func_name, func in program.functions().items():
             mv = pw.visitFunc(func_name, len(func.parameter_list))
+            for param in func.parameter_list:
+                param.ident.getattr('symbol').temp = mv.freshTemp()
             func.body.accept(self, mv)
             # Remember to call mv.visitEnd after the translation a function.
             mv.visitEnd()
