@@ -106,7 +106,7 @@ def p_parameter(p):
 
 def p_call(p):
     """
-    statement_matched : Identifier LParen argument_list RParen Semi
+    postfix : Identifier LParen argument_list RParen
     """
     p[0] = Call(p[1], p[2])
 
