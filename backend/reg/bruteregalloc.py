@@ -66,8 +66,18 @@ class BruteRegAlloc(RegAlloc):
         # in step9, you may need to think about how to store callersave regs here
         for loc in bb.allSeq():
             subEmitter.emitComment(str(loc.instr))
-
-            self.allocForLoc(loc, subEmitter)
+            if isinstance(loc.instr, Riscv.Call):
+                for reg in self.emitter.callerSaveRegs:
+                    if reg.isUsed():
+                        subEmitter.emitStoreToStack(reg)
+            elif isinstance(loc.instr, Riscv.Push):
+                reg = self.allocRegFor(loc.instr.src, True, loc.liveIn, subEmitter)
+                subEmitter.emitStoreToStack(reg)
+            elif isinstance(loc.instr, Riscv.Pop):
+                reg = self.allocRegFor(loc.instr.dst, False, loc.liveIn, subEmitter)
+                subEmitter.emitLoadFromStack(reg)
+            else:
+                self.allocForLoc(loc, subEmitter)
 
         for tempindex in bb.liveOut:
             if tempindex in self.bindings:

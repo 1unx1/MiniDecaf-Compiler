@@ -21,17 +21,21 @@ class TACGen(Visitor[FuncVisitor, None]):
 
     # Entry of this phase
     def transform(self, program: Program) -> TACProg:
-        mainFunc = program.mainFunc()
-        pw = ProgramWriter(["main"])
-        # The function visitor of 'main' is special.
-        mv = pw.visitMainFunc()
-
-        mainFunc.body.accept(self, mv)
-        # Remember to call mv.visitEnd after the translation a function.
-        mv.visitEnd()
-
+        pw = ProgramWriter(list(program.functions().keys))
+        for func_name, func in program.functions().items():
+            mv = pw.visitFunc(func_name, len(func.parameter_list))
+            func.body.accept(self, mv)
+            # Remember to call mv.visitEnd after the translation a function.
+            mv.visitEnd()
         # Remember to call pw.visitEnd before finishing the translation phase.
         return pw.visitEnd()
+
+    def visitCall(self, call: Call, mv: FuncVisitor) -> None:
+        for argument in reversed(call.argument_list):
+            argument.accept(self, mv)
+            mv.visitParam(argument.getattr('val'))
+        args = [argument.getattr('val') for argument in call.argument_list]
+        call.setattr('val', mv.visitCall(mv.ctx.getFuncLabel(call.ident.value), args))
 
     def visitBlock(self, block: Block, mv: FuncVisitor) -> None:
         for child in block:

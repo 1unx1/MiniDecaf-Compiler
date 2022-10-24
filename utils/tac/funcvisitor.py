@@ -77,6 +77,14 @@ class FuncVisitor:
     def visitLabel(self, label: Label) -> None:
         self.func.add(Mark(label))
 
+    def visitParam(self, parameter: Temp) -> None:
+        self.func.add(Param(parameter))
+
+    def visitCall(self, target: Label, args: list[Temp]) -> Temp:
+        temp = self.freshTemp()
+        self.func.add(Call(temp, target, args))
+        return temp
+
     def visitMemo(self, content: str) -> None:
         self.func.add(Memo(content))
 

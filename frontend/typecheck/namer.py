@@ -43,10 +43,13 @@ class Namer(Visitor[ScopeStack, None]):
         if ctx.findConflict(func.ident.value):
             raise DecafDeclConflictError(func.ident.value)
         funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope())
+        for param in func.parameter_list:
+            funcSymbol.addParaType(param.var_t)
         ctx.declare(funcSymbol)
         ctx.open(Scope(ScopeKind.LOCAL))
         for param in func.parameter_list:
             param.accept(self, ctx)
+        func.body.func_body = True
         func.body.accept(self, ctx)
         ctx.close()
 
@@ -58,11 +61,23 @@ class Namer(Visitor[ScopeStack, None]):
         param.setattr('symbol', symbol)
 
     def visitCall(self, call: Call, ctx: ScopeStack) -> None:
-        call.ident.accept(self, ctx)
+        try:
+            call.ident.accept(self, ctx)
+        except DecafUndefinedVarError:
+            raise DecafUndefinedFuncError(call.ident.value)
+        funcSymbol = call.ident.getattr('symbol')
+        if not isinstance(funcSymbol, FuncSymbol):
+            raise DecafUndefinedFuncError(call.ident.value)
+        if len(call.argument_list) != funcSymbol.parameterNum:
+            raise DecafBadFuncCallError
         for argument in call.argument_list:
             argument.accept(self, ctx)
 
     def visitBlock(self, block: Block, ctx: ScopeStack) -> None:
+        if block.func_body:
+            for child in block:
+                child.accept(self, ctx)
+            return
         ctx.open(Scope(ScopeKind.LOCAL))
         for child in block:
             child.accept(self, ctx)
@@ -172,9 +187,7 @@ class Namer(Visitor[ScopeStack, None]):
         """
         symbol = ctx.lookup(ident.value)
         if not symbol:
-            if (isinstance(symbol, VarSymbol)):
-                raise DecafUndefinedVarError(ident.value)
-            raise DecafUndefinedFuncError(ident.value)
+            raise DecafUndefinedVarError(ident.value)
         ident.setattr('symbol', symbol)
 
     def visitIntLiteral(self, expr: IntLiteral, ctx: ScopeStack) -> None:

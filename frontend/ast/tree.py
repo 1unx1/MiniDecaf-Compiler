@@ -285,8 +285,9 @@ class Block(Statement, ListNode[Union["Statement", "Declaration"]]):
     AST node of block "statement".
     """
 
-    def __init__(self, *children: Union[Statement, Declaration]) -> None:
+    def __init__(self, *children: Union[Statement, Declaration], func_body: bool = False) -> None:
         super().__init__("block", list(children))
+        self.func_body = func_body
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitBlock(self, ctx)

@@ -137,6 +137,30 @@ class Riscv:
         def __str__(self) -> str:
             return "j " + str(self.target)
 
+    class Call(TACInstr):
+        def __init__(self, target: Label) -> None:
+            super().__init__(InstrKind.CALL, [], [], target)
+            self.target = target
+
+        def __str__(self) -> str:
+            return 'call ' + str(self.target)
+
+    class Push(TACInstr):
+        def __init__(self, src: Temp) -> None:
+            super().__init__(InstrKind.SEQ, [], [src], None)
+            self.src = src
+        
+        def __str__(self) -> str:
+            return 'push ' + str(self.src)
+
+    class Pop(TACInstr):
+        def __init__(self, dst: Temp) -> None:
+            super().__init__(InstrKind.SEQ, [dst], [], None)
+            self.dst = dst
+        
+        def __str__(self) -> str:
+            return 'pop ' + str(self.dst)
+
     class SPAdd(NativeInstr):
         def __init__(self, offset: int) -> None:
             super().__init__(InstrKind.SEQ, [Riscv.SP], [Riscv.SP], None)

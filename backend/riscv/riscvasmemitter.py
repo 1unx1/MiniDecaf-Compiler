@@ -112,6 +112,14 @@ class RiscvAsmEmitter(AsmEmitter):
         def visitAssign(self, instr: Assign) -> None:
             self.seq.append(Riscv.Move(instr.dst, instr.src))
 
+        def visitParam(self, instr: Param) -> None:
+            self.seq.append(Riscv.Push(instr.parameter))
+
+        def visitCall(self, instr: Call) -> None:
+            self.seq.append(Riscv.Call(instr.target))
+            self.seq.append(Riscv.Move(instr.ret_v, Riscv.RA.temp))
+            for arg in instr.args:
+                self.seq.append(Riscv.Pop(arg))
         # in step9, you need to think about how to pass the parameters and how to store and restore callerSave regs
         # in step11, you need to think about how to store the array 
 """
@@ -177,6 +185,7 @@ class RiscvSubroutineEmitter(SubroutineEmitter):
 
         # in step9, you need to think about how to store RA here
         # you can get some ideas from how to save CalleeSaved regs
+        self.printer.printInstr(Riscv.NativeStoreWord(Riscv.RA, Riscv.SP, self.nextLocalOffset - 4))
         for i in range(len(Riscv.CalleeSaved)):
             if Riscv.CalleeSaved[i].isUsed():
                 self.printer.printInstr(

@@ -202,3 +202,31 @@ class Mark(TACInstr):
 
     def accept(self, v: TACVisitor) -> None:
         v.visitMark(self)
+
+
+# Parameter setting instruction.
+class Param(TACInstr):
+    def __init__(self, parameter: Temp) -> None:
+        super().__init__(InstrKind.SEQ, [], [parameter], None)
+        self.parameter = parameter
+
+    def __str__(self) -> str:
+        return 'param %s' % str(self.parameter)
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitParam(self)
+
+
+# Calling a function.
+class Call(TACInstr):
+    def __init__(self, ret_v: Temp, target: Label, args: list[Temp]) -> None:
+        super().__init__(InstrKind.CALL, [ret_v], [], target)
+        self.ret_v = ret_v
+        self.target = target
+        self.args = args
+
+    def __str__(self) -> str:
+        return '%s = call %s' % (str(self.ret_v), str(self.target))
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitCall(self)
