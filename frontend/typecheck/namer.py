@@ -69,7 +69,7 @@ class Namer(Visitor[ScopeStack, None]):
         if not isinstance(funcSymbol, FuncSymbol):
             raise DecafUndefinedFuncError(call.ident.value)
         if len(call.argument_list) != funcSymbol.parameterNum:
-            raise DecafBadFuncCallError
+            raise DecafBadFuncCallError(call.ident.value)
         for argument in call.argument_list:
             argument.accept(self, ctx)
 

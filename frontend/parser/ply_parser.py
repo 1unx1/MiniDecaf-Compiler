@@ -108,7 +108,7 @@ def p_call(p):
     """
     postfix : Identifier LParen argument_list RParen
     """
-    p[0] = Call(p[1], p[2])
+    p[0] = Call(p[1], p[3])
 
 
 def p_argument_list(p):

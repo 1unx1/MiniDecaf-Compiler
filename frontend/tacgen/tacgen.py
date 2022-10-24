@@ -21,7 +21,7 @@ class TACGen(Visitor[FuncVisitor, None]):
 
     # Entry of this phase
     def transform(self, program: Program) -> TACProg:
-        pw = ProgramWriter(list(program.functions().keys))
+        pw = ProgramWriter([func for func in program.functions()])
         for func_name, func in program.functions().items():
             mv = pw.visitFunc(func_name, len(func.parameter_list))
             func.body.accept(self, mv)
