@@ -217,7 +217,7 @@ class RiscvSubroutineEmitter(SubroutineEmitter):
                 self.printer.printInstr(
                     Riscv.NativeLoadWord(Riscv.CalleeSaved[i], Riscv.SP, 4 * i)
                 )
-
+        self.printer.printInstr(Riscv.NativeLoadWord(Riscv.RA, Riscv.SP, self.nextLocalOffset - 4))
         self.printer.printInstr(Riscv.SPAdd(self.nextLocalOffset))
         self.printer.printComment("end of epilogue")
         self.printer.println("")

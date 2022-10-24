@@ -70,6 +70,7 @@ class BruteRegAlloc(RegAlloc):
                 for reg in self.emitter.callerSaveRegs:
                     if reg.isUsed():
                         subEmitter.emitStoreToStack(reg)
+                self.allocForLoc(loc, subEmitter)
             elif isinstance(loc.instr, Riscv.Push):
                 reg = self.allocRegFor(loc.instr.src, True, loc.liveIn, subEmitter)
                 subEmitter.emitStoreToStack(reg)
