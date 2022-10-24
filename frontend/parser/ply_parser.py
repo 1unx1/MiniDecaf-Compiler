@@ -41,6 +41,14 @@ def p_empty(p: yacc.YaccProduction):
 
 def p_program(p):
     """
+    program : program function
+    """
+    p[1].children.append(p[2])
+    p[0] = Program(p[1])
+
+
+def p_program_one(p):
+    """
     program : function
     """
     p[0] = Program(p[1])
@@ -57,7 +65,7 @@ def p_function_def(p):
     """
     function : type Identifier LParen parameter_list RParen LBrace block RBrace
     """
-    p[0] = Function(p[1], p[2], p[4], p[6])
+    p[0] = Function(p[1], p[2], p[4], p[7])
 
 
 def p_parameter_list(p):
