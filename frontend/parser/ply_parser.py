@@ -44,7 +44,7 @@ def p_program(p):
     program : program function
     """
     p[1].children.append(p[2])
-    p[0] = Program(p[1])
+    p[0] = p[1]
 
 
 def p_program_one(p):
