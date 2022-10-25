@@ -220,7 +220,7 @@ class Param(TACInstr):
 # Calling a function.
 class Call(TACInstr):
     def __init__(self, ret_v: Temp, target: Label, args: list[Temp]) -> None:
-        super().__init__(InstrKind.CALL, [ret_v], [], target)
+        super().__init__(InstrKind.SEQ, [ret_v], [], target)
         self.ret_v = ret_v
         self.target = target
         self.args = args

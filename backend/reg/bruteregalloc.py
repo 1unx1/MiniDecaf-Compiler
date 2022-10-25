@@ -35,8 +35,8 @@ class BruteRegAlloc(RegAlloc):
         for reg in emitter.allocatableRegs:
             reg.used = False
 
-    def accept(self, graph: CFG, info: SubroutineInfo) -> None:
-        subEmitter = self.emitter.emitSubroutine(info)
+    def accept(self, graph: CFG, info: SubroutineInfo, params: list[Temp]) -> None:
+        subEmitter = self.emitter.emitSubroutine(info, params)
         for bb in graph.iterator():
             # you need to think more here
             # maybe we don't need to alloc regs for all the basic blocks
@@ -60,6 +60,9 @@ class BruteRegAlloc(RegAlloc):
 
     def localAlloc(self, bb: BasicBlock, subEmitter: SubroutineEmitter):
         self.bindings.clear()
+        if bb.id == 0:
+            for i, param in enumerate(subEmitter.params[:8]):
+                self.bind(param, Riscv.ArgRegs[i])
         for reg in self.emitter.allocatableRegs:
             reg.occupied = False
 
@@ -67,16 +70,7 @@ class BruteRegAlloc(RegAlloc):
         for loc in bb.allSeq():
             subEmitter.emitComment(str(loc.instr))
             if isinstance(loc.instr, Riscv.Call):
-                for reg in self.emitter.callerSaveRegs:
-                    if reg.isUsed():
-                        subEmitter.emitStoreToStack(reg)
-                self.allocForLoc(loc, subEmitter)
-            elif isinstance(loc.instr, Riscv.Push):
-                reg = self.allocRegFor(loc.instr.src, True, loc.liveIn, subEmitter)
-                subEmitter.emitStoreToStack(reg)
-            elif isinstance(loc.instr, Riscv.Pop):
-                reg = self.allocRegFor(loc.instr.dst, False, loc.liveIn, subEmitter)
-                subEmitter.emitLoadFromStack(reg, loc.instr.dst)
+                self.allocForCall(loc, subEmitter)
             else:
                 self.allocForLoc(loc, subEmitter)
 
@@ -86,6 +80,54 @@ class BruteRegAlloc(RegAlloc):
 
         if (not bb.isEmpty()) and (bb.kind is not BlockKind.CONTINUOUS):
             self.allocForLoc(bb.locs[len(bb.locs) - 1], subEmitter)
+
+    def allocForCall(self, loc: Loc, subEmitter: SubroutineEmitter):
+        # store caller save regs
+        callerSaveRegs = []
+        for reg in self.emitter.callerSaveRegs:
+            if reg.occupied and reg.temp.index in loc.liveOut:
+                subEmitter.emitStoreToStack(reg)
+                callerSaveRegs.append(reg)
+        # pass the parameters by stack
+        for arg in reversed(loc.instr.args):
+            reg = self.allocRegFor(arg, True, loc.liveIn, subEmitter)
+            # push the parameters
+            subEmitter.emitNative(Riscv.SPAdd(-4))
+            subEmitter.emitNative(Riscv.NativeStoreWord(reg, Riscv.SP, 0))
+            # change offsets due to the change of SP
+            subEmitter.changeOffset(4)
+        # pass the parameters by regs
+        for i in range(len(loc.instr.args[:8])):
+            # pop the parameters to arg regs
+            subEmitter.emitNative(Riscv.NativeLoadWord(Riscv.ArgRegs[i], Riscv.SP, 0))
+            subEmitter.emitNative(Riscv.SPAdd(4))
+            # change offsets due to the change of SP
+            subEmitter.changeOffset(-4)
+        # call instr
+        self.allocForLoc(loc, subEmitter)
+        # if there are parameters passed by stack
+        if len(loc.instr.args) > 8:
+            size = 4 * (len(loc.instr.args) - 8)
+            # free stack memory
+            subEmitter.emitNative(Riscv.SPAdd(size))
+            # change offsets due to the change of SP
+            subEmitter.changeOffset(-size)
+        # store return value
+        self.saveReturnValue(loc, subEmitter)
+        # load caller save regs
+        for reg in callerSaveRegs:
+            subEmitter.emitLoadFromStack(reg, reg.temp)
+
+    def saveReturnValue(self, loc: Loc, subEmitter: SubroutineEmitter):
+        tempForA0 = None
+        if Riscv.A0.occupied:
+            tempForA0 = Riscv.A0.temp
+            self.unbind(Riscv.A0.temp)
+        self.bind(loc.instr.ret_v, Riscv.A0)
+        subEmitter.emitStoreToStack(Riscv.A0)
+        self.unbind(Riscv.A0.temp)
+        if tempForA0:
+            self.bind(tempForA0, Riscv.A0)
 
     def allocForLoc(self, loc: Loc, subEmitter: SubroutineEmitter):
         instr = loc.instr

@@ -4,9 +4,9 @@ from .tacinstr import TACInstr
 
 
 class TACFunc:
-    def __init__(self, entry: FuncLabel, numArgs: int) -> None:
+    def __init__(self, entry: FuncLabel) -> None:
         self.entry = entry
-        self.numArgs = numArgs
+        self.params = []
         self.instrSeq = []
         self.tempUsed = 0
 

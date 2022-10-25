@@ -23,9 +23,11 @@ class TACGen(Visitor[FuncVisitor, None]):
     def transform(self, program: Program) -> TACProg:
         pw = ProgramWriter([func for func in program.functions()])
         for func_name, func in program.functions().items():
-            mv = pw.visitFunc(func_name, len(func.parameter_list))
+            mv = pw.visitFunc(func_name)
             for param in func.parameter_list:
-                param.getattr('symbol').temp = mv.freshTemp()
+                temp = mv.freshTemp()
+                param.getattr('symbol').temp = temp
+                mv.func.params.append(temp)
             func.body.accept(self, mv)
             # Remember to call mv.visitEnd after the translation a function.
             mv.visitEnd()
@@ -33,7 +35,7 @@ class TACGen(Visitor[FuncVisitor, None]):
         return pw.visitEnd()
 
     def visitCall(self, call: Call, mv: FuncVisitor) -> None:
-        for argument in reversed(call.argument_list):
+        for argument in call.argument_list:
             argument.accept(self, mv)
             mv.visitParam(argument.getattr('val'))
         args = [argument.getattr('val') for argument in call.argument_list]

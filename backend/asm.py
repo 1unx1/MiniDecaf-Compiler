@@ -22,6 +22,6 @@ class Asm:
             builder = CFGBuilder()
             cfg: CFG = builder.buildFrom(pair[0])
             analyzer.accept(cfg)
-            self.regAlloc.accept(cfg, pair[1])
+            self.regAlloc.accept(cfg, pair[1], func.params)
 
         return self.emitter.emitEnd()

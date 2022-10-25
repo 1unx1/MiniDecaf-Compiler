@@ -13,12 +13,11 @@ from .temp import Temp
 
 
 class FuncVisitor:
-    def __init__(self, entry: FuncLabel, numArgs: int, ctx: Context) -> None:
+    def __init__(self, entry: FuncLabel, ctx: Context) -> None:
         self.ctx = ctx
-        self.func = TACFunc(entry, numArgs)
+        self.func = TACFunc(entry)
         self.visitLabel(entry)
         self.nextTempId = 0
-
         self.continueLabelStack = []
         self.breakLabelStack = []
 

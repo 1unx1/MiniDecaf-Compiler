@@ -22,9 +22,9 @@ class ProgramWriter:
         entry = MAIN_LABEL
         return FuncVisitor(entry, 0, self.ctx)
 
-    def visitFunc(self, name: str, numArgs: int) -> FuncVisitor:
+    def visitFunc(self, name: str) -> FuncVisitor:
         entry = self.ctx.getFuncLabel(name)
-        return FuncVisitor(entry, numArgs, self.ctx)
+        return FuncVisitor(entry, self.ctx)
 
     def visitEnd(self) -> TACProg:
         return TACProg(self.ctx.funcs)
