@@ -60,11 +60,12 @@ class BruteRegAlloc(RegAlloc):
 
     def localAlloc(self, bb: BasicBlock, subEmitter: SubroutineEmitter):
         self.bindings.clear()
+        for reg in self.emitter.allocatableRegs:
+            reg.occupied = False
+        # the first basic block
         if bb.id == 0:
             for i, param in enumerate(subEmitter.params[:8]):
                 self.bind(param, Riscv.ArgRegs[i])
-        for reg in self.emitter.allocatableRegs:
-            reg.occupied = False
 
         # in step9, you may need to think about how to store callersave regs here
         for loc in bb.allSeq():
