@@ -199,7 +199,7 @@ class RiscvSubroutineEmitter(SubroutineEmitter):
         # save FP
         self.printer.printInstr(Riscv.NativeStoreWord(Riscv.FP, Riscv.SP, 4 * len(Riscv.CalleeSaved)))
         # update FP
-        self.printer.printInstr(Riscv.Move(Riscv.FP, Riscv.SP))
+        self.printer.printInstr(Riscv.FPUpdate(self.nextLocalOffset))
 
         for i in range(len(Riscv.CalleeSaved)):
             if Riscv.CalleeSaved[i].isUsed():
