@@ -31,8 +31,14 @@ class TACGen(Visitor[FuncVisitor, None]):
             func.body.accept(self, mv)
             # Remember to call mv.visitEnd after the translation a function.
             mv.visitEnd()
+        globalSymbolNameValues = {}
+        for decl in program.declarations():
+            if decl.init_expr != NULL:
+                decl.getattr('symbol').setInitValue(decl.init_expr.value)
+            globalSymbol = decl.getattr('symbol')
+            globalSymbolNameValues[globalSymbol.name] = globalSymbol.initValue
         # Remember to call pw.visitEnd before finishing the translation phase.
-        return pw.visitEnd()
+        return pw.visitEnd(globalSymbolNameValues)
 
     def visitCall(self, call: Call, mv: FuncVisitor) -> None:
         for argument in call.argument_list:
@@ -59,7 +65,11 @@ class TACGen(Visitor[FuncVisitor, None]):
         """
         1. Set the 'val' attribute of ident as the temp variable of the 'symbol' attribute of ident.
         """
-        ident.setattr('val', ident.getattr('symbol').temp)
+        symbol = ident.getattr('symbol')
+        if symbol.isGlobal:
+            base = mv.visitLoadSymbol(symbol.name)
+            symbol.temp = mv.visitLoadInMem(base, 0)
+        ident.setattr('val', symbol.temp)
 
     def visitDeclaration(self, decl: Declaration, mv: FuncVisitor) -> None:
         """
@@ -81,7 +91,12 @@ class TACGen(Visitor[FuncVisitor, None]):
         """
         symbol = expr.lhs.getattr('symbol')
         expr.rhs.accept(self, mv)
-        expr.setattr('val', mv.visitAssignment(symbol.temp, expr.rhs.getattr('val')))
+        if symbol.isGlobal:
+            base = mv.visitLoadSymbol(symbol.name)
+            mv.visitStoreInMem(expr.rhs.getattr('val'), base, 0)
+            expr.setattr('val', expr.rhs.getattr('val'))
+        else:
+            expr.setattr('val', mv.visitAssignment(symbol.temp, expr.rhs.getattr('val')))
 
     def visitIf(self, stmt: If, mv: FuncVisitor) -> None:
         stmt.cond.accept(self, mv)

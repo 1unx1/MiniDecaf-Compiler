@@ -147,6 +147,32 @@ class Riscv:
         def __str__(self) -> str:
             return 'call ' + str(self.target.name)
 
+    class LoadAddress(TACInstr):
+        def __init__(self, dst: Temp, symbolName: str) -> None:
+            super().__init__(InstrKind.SEQ, [dst], [], None)
+            self.symbolName = symbolName
+
+        def __str__(self) -> str:
+            return 'la ' + Riscv.FMT2.format(str(self.dsts[0]), str(self.symbolName))
+
+    class Store(TACInstr):
+        def __init__(self, src: Temp, base: Temp, offset: int) -> None:
+            super().__init__(InstrKind.SEQ, [], [src, base], None)
+            self.offset = offset
+
+        def __str__(self) -> str:
+            assert -2048 <= self.offset <= 2047  # Riscv imm [11:0]
+            return 'sw ' + Riscv.FMT_OFFSET.format(str(self.srcs[0]), str(self.offset), str(self.srcs[1]))
+
+    class Load(TACInstr):
+        def __init__(self, dst: Temp, base: Temp, offset: int) -> None:
+            super().__init__(InstrKind.SEQ, [dst], [base], None)
+            self.offset = offset
+
+        def __str__(self) -> str:
+            assert -2048 <= self.offset <= 2047  # Riscv imm [11:0]
+            return 'lw ' + Riscv.FMT_OFFSET.format(str(self.dsts[0]), str(self.offset), str(self.srcs[0]))
+
     class SPAdd(NativeInstr):
         def __init__(self, offset: int) -> None:
             super().__init__(InstrKind.SEQ, [Riscv.SP], [Riscv.SP], None)

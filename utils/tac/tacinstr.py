@@ -211,7 +211,7 @@ class Param(TACInstr):
         self.parameter = parameter
 
     def __str__(self) -> str:
-        return 'param %s' % str(self.parameter)
+        return 'param %s' % (self.parameter)
 
     def accept(self, v: TACVisitor) -> None:
         return v.visitParam(self)
@@ -226,7 +226,51 @@ class Call(TACInstr):
         self.args = args
 
     def __str__(self) -> str:
-        return '%s = call %s' % (str(self.ret_v), str(self.target))
+        return '%s = call %s' % (self.ret_v, self.target)
 
     def accept(self, v: TACVisitor) -> None:
         return v.visitCall(self)
+
+
+# Load address of symbol.
+class LoadSymbol(TACInstr):
+    def __init__(self, dst: Temp, symbolName: str) -> None:
+        super().__init__(InstrKind.SEQ, [dst], [], None)
+        self.dst = dst
+        self.symbolName = symbolName
+
+    def __str__(self) -> str:
+        return '%s = load_symbol %s' % (self.dst, self.symbolName)
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitLoadSymbol(self)
+
+
+# Store data in address = base + offset.
+class Store(TACInstr):
+    def __init__(self, src: Temp, base: Temp, offset: int) -> None:
+        super().__init__(InstrKind.SEQ, [], [src, base], None)
+        self.src = src
+        self.base = base
+        self.offset = offset
+
+    def __str__(self) -> str:
+        return 'store %s, %s, %s' % (self.src, self.base, self.offset)
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitStore(self)
+
+
+# Load data in address = base + offset.
+class Load(TACInstr):
+    def __init__(self, dst: Temp, base: Temp, offset: int) -> None:
+        super().__init__(InstrKind.SEQ, [dst], [base], None)
+        self.dst = dst
+        self.base = base
+        self.offset = offset
+
+    def __str__(self) -> str:
+        return '%s = load %s, %s' % (self.dst, self.base, self.offset)
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitLoad(self)

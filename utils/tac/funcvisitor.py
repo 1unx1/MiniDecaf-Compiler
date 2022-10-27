@@ -84,6 +84,19 @@ class FuncVisitor:
         self.func.add(Call(temp, target, args))
         return temp
 
+    def visitLoadSymbol(self, symbolName: str) -> Temp:
+        temp = self.freshTemp()
+        self.func.add(LoadSymbol(temp, symbolName))
+        return temp
+
+    def visitLoadInMem(self, base: Temp, offset: int) -> Temp:
+        temp = self.freshTemp()
+        self.func.add(Load(temp, base, offset))
+        return temp
+
+    def visitStoreInMem(self, src: Temp, base: Temp, offset: int) -> None:
+        self.func.add(Store(src, base, offset))
+
     def visitMemo(self, content: str) -> None:
         self.func.add(Memo(content))
 

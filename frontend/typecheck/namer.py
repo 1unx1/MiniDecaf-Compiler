@@ -36,8 +36,8 @@ class Namer(Visitor[ScopeStack, None]):
         # Check if the 'main' function is missing
         if not program.hasMainFunc():
             raise DecafNoMainFuncError
-        for func in program.functions().values():
-            func.accept(self, ctx)
+        for funcOrDecl in program:
+            funcOrDecl.accept(self, ctx)
 
     def visitFunction(self, func: Function, ctx: ScopeStack) -> None:
         if ctx.findConflict(func.ident.value):
@@ -149,13 +149,18 @@ class Namer(Visitor[ScopeStack, None]):
         3. Set the 'symbol' attribute of decl.
         4. If there is an initial value, visit it.
         """
+        isGlobal = ctx.isGlobalScope()
         if ctx.findConflict(decl.ident.value):
+            if isGlobal:
+                raise DecafGlobalVarDefinedTwiceError(decl.ident.value)
             raise DecafDeclConflictError(decl.ident.value)
-        symbol = VarSymbol(decl.ident.value, decl.var_t.type)
+        symbol = VarSymbol(decl.ident.value, decl.var_t.type, isGlobal)
         ctx.declare(symbol)
         decl.setattr('symbol', symbol)
         if decl.init_expr != NULL:
             decl.init_expr.accept(self, ctx)
+            if isGlobal and not isinstance(decl.init_expr, IntLiteral):
+                raise DecafGlobalVarBadInitValueError(decl.ident.value)
 
     def visitAssignment(self, expr: Assignment, ctx: ScopeStack) -> None:
         """

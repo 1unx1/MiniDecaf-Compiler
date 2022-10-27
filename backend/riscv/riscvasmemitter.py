@@ -22,12 +22,20 @@ class RiscvAsmEmitter(AsmEmitter):
         self,
         allocatableRegs: list[Reg],
         callerSaveRegs: list[Reg],
+        globalSymbolNameValues: dict[str, int]
     ) -> None:
         super().__init__(allocatableRegs, callerSaveRegs)
 
     
         # the start of the asm code
         # int step10, you need to add the declaration of global var here
+        if globalSymbolNameValues:
+            self.printer.println('.data')
+            for symbolName, initValue in globalSymbolNameValues.items():
+                self.printer.println('.global %s' % (symbolName))
+                self.printer.printLabel(Label(LabelKind.TEMP, symbolName))
+                self.printer.println('.word %s' % (initValue))
+                self.printer.println("")
         self.printer.println(".text")
         self.printer.println(".global main")
         self.printer.println("")
@@ -115,9 +123,18 @@ class RiscvAsmEmitter(AsmEmitter):
         def visitParam(self, instr: Param) -> None:
             pass
 
+        # in step9, you need to think about how to pass the parameters and how to store and restore callerSave regs
         def visitCall(self, instr: Call) -> None:
             self.seq.append(Riscv.Call(instr.ret_v, instr.target, instr.args))
-        # in step9, you need to think about how to pass the parameters and how to store and restore callerSave regs
+        
+        def visitLoadSymbol(self, instr: LoadSymbol) -> None:
+            self.seq.append(Riscv.LoadAddress(instr.dst, instr.symbolName))
+
+        def visitStore(self, instr: Store) -> None:
+            self.seq.append(Riscv.Store(instr.src, instr.base, instr.offset))
+
+        def visitLoad(self, instr: Load) -> None:
+            self.seq.append(Riscv.Load(instr.dst, instr.base, instr.offset))
         # in step11, you need to think about how to store the array 
 """
 RiscvAsmEmitter: an SubroutineEmitter for RiscV
