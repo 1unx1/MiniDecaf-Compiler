@@ -40,18 +40,37 @@ class Namer(Visitor[ScopeStack, None]):
             funcOrDecl.accept(self, ctx)
 
     def visitFunction(self, func: Function, ctx: ScopeStack) -> None:
-        if ctx.findConflict(func.ident.value):
-            raise DecafDeclConflictError(func.ident.value)
-        funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope())
-        for param in func.parameter_list:
-            funcSymbol.addParaType(param.var_t)
-        ctx.declare(funcSymbol)
-        ctx.open(Scope(ScopeKind.LOCAL))
-        for param in func.parameter_list:
-            param.accept(self, ctx)
-        func.body.func_body = True
-        func.body.accept(self, ctx)
-        ctx.close()
+        if func.body != NULL: # definination
+            declaredFuncSymbol = ctx.findConflict(func.ident.value)
+            if declaredFuncSymbol: # declared
+                if declaredFuncSymbol.defined: # declared and defined
+                    raise DecafDeclConflictError(func.ident.value)
+                # declared but not defined
+                declaredFuncSymbol.defined = True
+                ctx.open(Scope(ScopeKind.LOCAL))
+                for param in func.parameter_list:
+                    param.accept(self, ctx)
+                func.body.func_body = True
+                func.body.accept(self, ctx)
+                ctx.close()
+            else: # not declared, declare and define at the same time
+                funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), True)
+                for param in func.parameter_list:
+                    funcSymbol.addParaType(param.var_t)
+                ctx.declare(funcSymbol)
+                ctx.open(Scope(ScopeKind.LOCAL))
+                for param in func.parameter_list:
+                    param.accept(self, ctx)
+                func.body.func_body = True
+                func.body.accept(self, ctx)
+                ctx.close()
+        else: # declaration
+            if ctx.findConflict(func.ident.value):
+                raise DecafDeclConflictError(func.ident.value)
+            funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), False)
+            for param in func.parameter_list:
+                funcSymbol.addParaType(param.var_t)
+            ctx.declare(funcSymbol)
 
     def visitParameter(self, param: Parameter, ctx: ScopeStack) -> None:
         if ctx.findConflict(param.ident.value):

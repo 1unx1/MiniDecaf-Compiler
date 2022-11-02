@@ -54,7 +54,7 @@ class Program(ListNode[Union["Function", 'Declaration']]):
         super().__init__("program", list(children))
 
     def functions(self) -> dict[str, Function]:
-        return {func.ident.value: func for func in self if isinstance(func, Function)}
+        return {func.ident.value: func for func in self if isinstance(func, Function) and func.body != NULL}
 
     def declarations(self) -> list[Declaration]:
         return [decl for decl in self if isinstance(decl, Declaration)]

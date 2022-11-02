@@ -63,6 +63,13 @@ def p_type(p):
     p[0] = TInt()
 
 
+def p_function_decl(p):
+    """
+    function : type Identifier LParen parameter_list RParen Semi
+    """
+    p[0] = Function(p[1], p[2], p[4], NULL)
+
+
 def p_function_def(p):
     """
     function : type Identifier LParen parameter_list RParen LBrace block RBrace
