@@ -48,23 +48,17 @@ class Namer(Visitor[ScopeStack, None]):
                     raise DecafDeclConflictError(func.ident.value)
                 # declared but not defined
                 declaredFuncSymbol.defined = True
-                ctx.open(Scope(ScopeKind.LOCAL))
-                for param in func.parameter_list:
-                    param.accept(self, ctx)
-                func.body.func_body = True
-                func.body.accept(self, ctx)
-                ctx.close()
             else: # not declared, declare and define at the same time
                 funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), True)
                 for param in func.parameter_list:
                     funcSymbol.addParaType(param.var_t)
                 ctx.declare(funcSymbol)
-                ctx.open(Scope(ScopeKind.LOCAL))
-                for param in func.parameter_list:
-                    param.accept(self, ctx)
-                func.body.func_body = True
-                func.body.accept(self, ctx)
-                ctx.close()
+            ctx.open(Scope(ScopeKind.LOCAL))
+            for param in func.parameter_list:
+                param.accept(self, ctx)
+            func.body.func_body = True
+            func.body.accept(self, ctx)
+            ctx.close()
         else: # declaration
             declaredFuncSymbol = ctx.findConflict(func.ident.value)
             if declaredFuncSymbol: # declared
