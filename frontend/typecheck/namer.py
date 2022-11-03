@@ -43,7 +43,8 @@ class Namer(Visitor[ScopeStack, None]):
         if func.body != NULL: # definination
             declaredFuncSymbol = ctx.findConflict(func.ident.value)
             if declaredFuncSymbol: # declared
-                if declaredFuncSymbol.defined: # declared and defined
+                if declaredFuncSymbol.defined or len(func.parameter_list) != declaredFuncSymbol.parameterNum:
+                    # declared and defined or conflict declaration
                     raise DecafDeclConflictError(func.ident.value)
                 # declared but not defined
                 declaredFuncSymbol.defined = True
@@ -65,8 +66,12 @@ class Namer(Visitor[ScopeStack, None]):
                 func.body.accept(self, ctx)
                 ctx.close()
         else: # declaration
-            if ctx.findConflict(func.ident.value):
-                raise DecafDeclConflictError(func.ident.value)
+            declaredFuncSymbol = ctx.findConflict(func.ident.value)
+            if declaredFuncSymbol: # declared
+                if len(func.parameter_list) != declaredFuncSymbol.parameterNum:
+                    raise DecafDeclConflictError(func.ident.value)
+                return # multi-declaration
+            # first declaration
             funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), False)
             for param in func.parameter_list:
                 funcSymbol.addParaType(param.var_t)
@@ -80,12 +85,8 @@ class Namer(Visitor[ScopeStack, None]):
         param.setattr('symbol', symbol)
 
     def visitCall(self, call: Call, ctx: ScopeStack) -> None:
-        try:
-            call.ident.accept(self, ctx)
-        except DecafUndefinedVarError:
-            raise DecafUndefinedFuncError(call.ident.value)
-        funcSymbol = call.ident.getattr('symbol')
-        if not isinstance(funcSymbol, FuncSymbol):
+        funcSymbol = ctx.lookup(call.ident.value)
+        if not funcSymbol or not isinstance(funcSymbol, FuncSymbol):
             raise DecafUndefinedFuncError(call.ident.value)
         if len(call.argument_list) != funcSymbol.parameterNum:
             raise DecafBadFuncCallError(call.ident.value)
@@ -209,10 +210,10 @@ class Namer(Visitor[ScopeStack, None]):
         2. If it has not been declared, raise a DecafUndefinedVarError.
         3. Set the 'symbol' attribute of ident.
         """
-        symbol = ctx.lookup(ident.value)
-        if not symbol:
+        varSymbol = ctx.lookup(ident.value)
+        if not varSymbol or not isinstance(varSymbol, VarSymbol):
             raise DecafUndefinedVarError(ident.value)
-        ident.setattr('symbol', symbol)
+        ident.setattr('symbol', varSymbol)
 
     def visitIntLiteral(self, expr: IntLiteral, ctx: ScopeStack) -> None:
         value = expr.value
