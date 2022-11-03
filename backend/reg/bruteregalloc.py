@@ -34,6 +34,7 @@ class BruteRegAlloc(RegAlloc):
         self.bindings = {}
         for reg in emitter.allocatableRegs:
             reg.used = False
+        self.regIndex = 0 # index of allocatableRegs
 
     def accept(self, graph: CFG, info: SubroutineInfo, params: list[Temp]) -> None:
         subEmitter = self.emitter.emitSubroutine(info, params)
@@ -171,9 +172,8 @@ class BruteRegAlloc(RegAlloc):
                 self.bind(temp, reg)
                 return reg
 
-        reg = self.emitter.allocatableRegs[
-            random.randint(0, len(self.emitter.allocatableRegs) - 1)
-        ]
+        reg = self.emitter.allocatableRegs[self.regIndex]
+        self.regIndex = (self.regIndex + 1) % len(self.emitter.allocatableRegs)
         subEmitter.emitStoreToStack(reg)
         subEmitter.emitComment("  spill {} ({})".format(str(reg), str(reg.temp)))
         self.unbind(reg.temp)
