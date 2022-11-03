@@ -23,14 +23,15 @@ class TACGen(Visitor[FuncVisitor, None]):
     def transform(self, program: Program) -> TACProg:
         pw = ProgramWriter([func for func in program.functions()])
         for func_name, func in program.functions().items():
-            mv = pw.visitFunc(func_name)
-            for param in func.parameter_list:
-                temp = mv.freshTemp()
-                param.getattr('symbol').temp = temp
-                mv.func.params.append(temp)
-            func.body.accept(self, mv)
-            # Remember to call mv.visitEnd after the translation a function.
-            mv.visitEnd()
+            if func.body != NULL:
+                mv = pw.visitFunc(func_name)
+                for param in func.parameter_list:
+                    temp = mv.freshTemp()
+                    param.getattr('symbol').temp = temp
+                    mv.func.params.append(temp)
+                func.body.accept(self, mv)
+                # Remember to call mv.visitEnd after the translation a function.
+                mv.visitEnd()
         globalSymbolNameValues = {}
         for decl in program.declarations():
             if decl.init_expr != NULL:
