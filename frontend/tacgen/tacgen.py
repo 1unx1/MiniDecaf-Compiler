@@ -34,9 +34,11 @@ class TACGen(Visitor[FuncVisitor, None]):
                 mv.visitEnd()
         globalSymbolNameValues = {}
         for decl in program.declarations():
-            if decl.init_expr != NULL:
-                decl.getattr('symbol').setInitValue(decl.init_expr.value)
             globalSymbol = decl.getattr('symbol')
+            if decl.init_expr != NULL:
+                globalSymbol.setInitValue(decl.init_expr.value)
+            elif isinstance(globalSymbol.type, ArrayType): # default zero initialization, both variable and array
+                globalSymbol.initValue = [globalSymbol.initValue] * int(globalSymbol.type.size / 4)
             globalSymbolNameValues[globalSymbol.name] = globalSymbol.initValue
         # Remember to call pw.visitEnd before finishing the translation phase.
         return pw.visitEnd(globalSymbolNameValues)
@@ -47,6 +49,38 @@ class TACGen(Visitor[FuncVisitor, None]):
             mv.visitParam(argument.getattr('val'))
         args = [argument.getattr('val') for argument in call.argument_list]
         call.setattr('val', mv.visitCall(mv.ctx.getFuncLabel(call.ident.value), args))
+
+    def addressCompute(self, indexExpr: IndexExpr, mv: FuncVisitor) -> Temp:
+        expr = indexExpr
+        indexes = []
+        expr.index.accept(self, mv)
+        indexes.append(expr.index.getattr('val'))
+        while not isinstance(expr.base, Identifier):
+            expr = expr.base
+            expr.index.accept(self, mv)
+            indexes.append(expr.index.getattr('val'))
+        arraySymbol = expr.base.getattr('symbol')
+        if arraySymbol.isGlobal:
+            arraySymbol.temp = mv.visitLoadSymbol(arraySymbol.name)
+        lengths = [0]
+        type = arraySymbol.type
+        while isinstance(type, ArrayType):
+            lengths.append(type.length)
+            type = type.base
+        lengths.append(1)
+        lengths.reverse()
+        addrTemp = arraySymbol.temp
+        size = 4
+        for i, index in enumerate(indexes):
+            size *= lengths[i]
+            addrTemp = mv.visitBinary(tacop.BinaryOp.ADD, addrTemp, mv.visitBinary(
+                tacop.BinaryOp.MUL, index, mv.visitLoad(size)
+            ))
+        return addrTemp
+
+    def visitIndexExpr(self, indexExpr: IndexExpr, mv: FuncVisitor) -> None:
+        addrTemp = self.addressCompute(indexExpr, mv)
+        indexExpr.setattr('val', (mv.visitLoadInMem(addrTemp, 0)))
 
     def visitBlock(self, block: Block, mv: FuncVisitor) -> None:
         for child in block:
@@ -79,7 +113,11 @@ class TACGen(Visitor[FuncVisitor, None]):
         3. If the declaration has an initial value, use mv.visitAssignment to set it.
         """
         symbol = decl.getattr('symbol')
-        symbol.temp = mv.freshTemp()
+        if decl.indexes == NULL:
+            symbol.temp = mv.freshTemp()
+        else:
+            symbol.temp = mv.visitAlloc(symbol.type.size)
+            mv.func.arrays.append((symbol.temp, symbol.type.size))
         if decl.init_expr != NULL:
             decl.init_expr.accept(self, mv)
             decl.setattr('val', mv.visitAssignment(symbol.temp, decl.init_expr.getattr('val')))
@@ -90,14 +128,19 @@ class TACGen(Visitor[FuncVisitor, None]):
         2. Use mv.visitAssignment to emit an assignment instruction.
         3. Set the 'val' attribute of expr as the value of assignment instruction.
         """
-        symbol = expr.lhs.getattr('symbol')
         expr.rhs.accept(self, mv)
-        if symbol.isGlobal:
-            base = mv.visitLoadSymbol(symbol.name)
-            mv.visitStoreInMem(expr.rhs.getattr('val'), base, 0)
+        if isinstance(expr.lhs, IndexExpr):
+            addrTemp = self.addressCompute(expr.lhs, mv)
+            mv.visitStoreInMem(expr.rhs.getattr('val'), addrTemp, 0)
             expr.setattr('val', expr.rhs.getattr('val'))
         else:
-            expr.setattr('val', mv.visitAssignment(symbol.temp, expr.rhs.getattr('val')))
+            symbol = expr.lhs.getattr('symbol')
+            if symbol.isGlobal:
+                base = mv.visitLoadSymbol(symbol.name)
+                mv.visitStoreInMem(expr.rhs.getattr('val'), base, 0)
+                expr.setattr('val', expr.rhs.getattr('val'))
+            else:
+                expr.setattr('val', mv.visitAssignment(symbol.temp, expr.rhs.getattr('val')))
 
     def visitIf(self, stmt: If, mv: FuncVisitor) -> None:
         stmt.cond.accept(self, mv)

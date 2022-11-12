@@ -40,6 +40,9 @@ class Visitor(Protocol[T, U]):  # type: ignore
     def visitCall(self, that: Call, ctx: T) -> Optional[U]:
         return self.visitOther(that, ctx)
 
+    def visitIndexExpr(self, that: IndexExpr, ctx: T) -> Optional[U]:
+        return self.visitOther(that, ctx)
+
     def visitIf(self, that: If, ctx: T) -> Optional[U]:
         return self.visitOther(that, ctx)
 

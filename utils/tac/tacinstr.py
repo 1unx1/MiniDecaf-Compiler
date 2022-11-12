@@ -274,3 +274,15 @@ class Load(TACInstr):
 
     def accept(self, v: TACVisitor) -> None:
         return v.visitLoad(self)
+
+class Alloc(TACInstr):
+    def __init__(self, dst: Temp, size: int) -> None:
+        super().__init__(InstrKind.SEQ, [dst], [], None)
+        self.dst = dst
+        self.size = size
+
+    def __str__(self) -> str:
+        return '%s = alloc %s' % (self.dst, self.size)
+
+    def accept(self, v: TACVisitor) -> None:
+        return v.visitAlloc(self)

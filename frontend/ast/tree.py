@@ -312,18 +312,20 @@ class Declaration(Node):
         self,
         var_t: TypeLiteral,
         ident: Identifier,
+        indexes: list[IntLiteral],
         init_expr: Optional[Expression] = None,
     ) -> None:
         super().__init__("declaration")
         self.var_t = var_t
         self.ident = ident
+        self.indexes = indexes or NULL
         self.init_expr = init_expr or NULL
 
     def __getitem__(self, key: int) -> Node:
-        return (self.var_t, self.ident, self.init_expr)[key]
+        return (self.var_t, self.ident, self.indexes, self.init_expr)[key]
 
     def __len__(self) -> int:
-        return 3
+        return 4
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitDeclaration(self, ctx)
@@ -357,6 +359,26 @@ class Call(Expression):
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitCall(self, ctx)
+
+
+class IndexExpr(Expression):
+    """
+    AST node of index expression.
+    """
+
+    def __init__(self, base: Union[Identifier, IndexExpr], index: Expression) -> None:
+        super().__init__('index expr')
+        self.base = base
+        self.index = index
+
+    def __getitem__(self, key: int) -> Node:
+        return (self.base, self.index)[key]
+
+    def __len__(self) -> int:
+        return 2
+
+    def accept(self, v: Visitor[T, U], ctx: T):
+        return v.visitIndexExpr(self, ctx)
 
 
 class Unary(Expression):
@@ -421,7 +443,7 @@ class Assignment(Binary):
     It's actually a kind of binary expression, but it'll make things easier if we use another accept method to handle it.
     """
 
-    def __init__(self, lhs: Identifier, rhs: Expression) -> None:
+    def __init__(self, lhs: Union[Identifier, IndexExpr], rhs: Expression) -> None:
         super().__init__(BinaryOp.Assign, lhs, rhs)
 
     def accept(self, v: Visitor[T, U], ctx: T):

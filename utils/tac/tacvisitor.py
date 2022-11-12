@@ -48,3 +48,6 @@ class TACVisitor:
 
    def visitLoad(self, instr: Load) -> None:
         self.visitOther(instr)
+
+   def visitAlloc(self, instr: Alloc) -> None:
+        self.visitOther(instr)

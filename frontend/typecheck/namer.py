@@ -21,7 +21,7 @@ The namer phase: resolve all symbols defined in the abstract syntax tree and sto
 
 class Namer(Visitor[ScopeStack, None]):
     def __init__(self) -> None:
-        pass
+        self.indexExprDim = 0
 
     # Entry of this phase
     def transform(self, program: Program) -> Program:
@@ -51,7 +51,7 @@ class Namer(Visitor[ScopeStack, None]):
             else: # not declared, declare and define at the same time
                 funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), True)
                 for param in func.parameter_list:
-                    funcSymbol.addParaType(param.var_t)
+                    funcSymbol.addParaType(param.var_t.type)
                 ctx.declare(funcSymbol)
             ctx.open(Scope(ScopeKind.LOCAL))
             for param in func.parameter_list:
@@ -68,7 +68,7 @@ class Namer(Visitor[ScopeStack, None]):
             # first declaration
             funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), False)
             for param in func.parameter_list:
-                funcSymbol.addParaType(param.var_t)
+                funcSymbol.addParaType(param.var_t.type)
             ctx.declare(funcSymbol)
 
     def visitParameter(self, param: Parameter, ctx: ScopeStack) -> None:
@@ -86,6 +86,25 @@ class Namer(Visitor[ScopeStack, None]):
             raise DecafBadFuncCallError(call.ident.value)
         for argument in call.argument_list:
             argument.accept(self, ctx)
+
+    def visitIndexExpr(self, indexExpr: IndexExpr, ctx: ScopeStack) -> None:
+        self.indexExprDim += 1
+        if isinstance(indexExpr.base, Identifier):
+            arraySymbol = ctx.lookup(indexExpr.base.value)
+            if not arraySymbol:
+                raise DecafUndefinedVarError(indexExpr.base.value)
+            if not isinstance(arraySymbol, VarSymbol) or not isinstance(
+                arraySymbol.type, ArrayType):
+                raise DecafBadIndexError(indexExpr.base.value)
+            if self.indexExprDim > arraySymbol.type.dim:
+                raise DecafBadIndexError(indexExpr.base.value)
+            elif self.indexExprDim < arraySymbol.type.dim:
+                raise DecafTypeMismatchError()
+            self.indexExprDim = 0
+            indexExpr.base.setattr('symbol', arraySymbol)
+        else:
+            indexExpr.base.accept(self, ctx)
+        indexExpr.index.accept(self, ctx)
 
     def visitBlock(self, block: Block, ctx: ScopeStack) -> None:
         if block.func_body:
@@ -168,9 +187,15 @@ class Namer(Visitor[ScopeStack, None]):
             if isGlobal:
                 raise DecafGlobalVarDefinedTwiceError(decl.ident.value)
             raise DecafDeclConflictError(decl.ident.value)
-        symbol = VarSymbol(decl.ident.value, decl.var_t.type, isGlobal)
+        type = decl.var_t.type if decl.indexes == NULL else ArrayType.multidim(
+            decl.var_t.type, *[index.value for index in decl.indexes])
+        symbol = VarSymbol(decl.ident.value, type, isGlobal)
         ctx.declare(symbol)
         decl.setattr('symbol', symbol)
+        if decl.indexes != NULL:
+            for index in decl.indexes:
+                if index.value <= 0:
+                    raise DecafBadArraySizeError()
         if decl.init_expr != NULL:
             decl.init_expr.accept(self, ctx)
             if isGlobal and not isinstance(decl.init_expr, IntLiteral):
@@ -180,7 +205,10 @@ class Namer(Visitor[ScopeStack, None]):
         """
         1. Refer to the implementation of visitBinary.
         """
-        expr.lhs.accept(self, ctx)
+        try:
+            expr.lhs.accept(self, ctx)
+        except DecafTypeMismatchError:
+            raise DecafBadAssignTypeError()
         expr.rhs.accept(self, ctx)
 
     def visitUnary(self, expr: Unary, ctx: ScopeStack) -> None:
@@ -207,6 +235,8 @@ class Namer(Visitor[ScopeStack, None]):
         varSymbol = ctx.lookup(ident.value)
         if not varSymbol or not isinstance(varSymbol, VarSymbol):
             raise DecafUndefinedVarError(ident.value)
+        if isinstance(varSymbol.type, ArrayType):
+            raise DecafBadAssignTypeError()
         ident.setattr('symbol', varSymbol)
 
     def visitIntLiteral(self, expr: IntLiteral, ctx: ScopeStack) -> None:

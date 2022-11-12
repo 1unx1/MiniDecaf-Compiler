@@ -173,6 +173,16 @@ class Riscv:
             assert -2048 <= self.offset <= 2047  # Riscv imm [11:0]
             return 'lw ' + Riscv.FMT_OFFSET.format(str(self.dsts[0]), str(self.offset), str(self.srcs[0]))
 
+    class LoadArray(TACInstr):
+        def __init__(self, dst: Temp) -> None:
+            super().__init__(InstrKind.SEQ, [dst], [dst, Riscv.SP], None)
+            self.dst = dst
+
+        def __str__(self) -> str:
+            return "add " + Riscv.FMT3.format(
+                str(self.dsts[0]), str(self.srcs[0]), str(self.srcs[1])
+            )
+
     class SPAdd(NativeInstr):
         def __init__(self, offset: int) -> None:
             super().__init__(InstrKind.SEQ, [Riscv.SP], [Riscv.SP], None)

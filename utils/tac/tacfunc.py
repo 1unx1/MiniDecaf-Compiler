@@ -7,6 +7,7 @@ class TACFunc:
     def __init__(self, entry: FuncLabel) -> None:
         self.entry = entry
         self.params = []
+        self.arrays = []
         self.instrSeq = []
         self.tempUsed = 0
 

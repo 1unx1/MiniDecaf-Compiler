@@ -26,5 +26,5 @@ class ProgramWriter:
         entry = self.ctx.getFuncLabel(name)
         return FuncVisitor(entry, self.ctx)
 
-    def visitEnd(self, globalSymbolNameValues: dict[str, int]) -> TACProg:
+    def visitEnd(self, globalSymbolNameValues: dict[str, Union[int, list[int]]]) -> TACProg:
         return TACProg(self.ctx.funcs, globalSymbolNameValues)

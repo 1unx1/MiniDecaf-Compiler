@@ -30,6 +30,8 @@ t_LParen = "("
 t_RParen = ")"
 t_LBrace = "{"
 t_RBrace = "}"
+t_LSquareBracket = '['
+t_RSquareBracket = ']'
 
 t_Colon = ":"
 t_Question = "?"

@@ -22,7 +22,7 @@ class RiscvAsmEmitter(AsmEmitter):
         self,
         allocatableRegs: list[Reg],
         callerSaveRegs: list[Reg],
-        globalSymbolNameValues: dict[str, int]
+        globalSymbolNameValues: dict[str, Union[int, list[int]]]
     ) -> None:
         super().__init__(allocatableRegs, callerSaveRegs)
 
@@ -34,7 +34,10 @@ class RiscvAsmEmitter(AsmEmitter):
             for symbolName, initValue in globalSymbolNameValues.items():
                 self.printer.println('.global %s' % (symbolName))
                 self.printer.printLabel(Label(LabelKind.TEMP, symbolName))
-                self.printer.println('.word %s' % (initValue))
+                if isinstance(initValue, int): # global variable
+                    self.printer.println('.word %s' % (initValue))
+                else: # global array
+                    self.printer.println('.zero %s' % (len(initValue) * 4))
                 self.printer.println("")
         self.printer.println(".text")
         self.printer.println(".global main")
@@ -55,8 +58,8 @@ class RiscvAsmEmitter(AsmEmitter):
         return (selector.seq, info)
 
     # use info to construct a RiscvSubroutineEmitter
-    def emitSubroutine(self, info: SubroutineInfo, params: list[Temp]):
-        return RiscvSubroutineEmitter(self, info, params)
+    def emitSubroutine(self, info: SubroutineInfo, params: list[Temp], arrays: list[tuple[Temp, int]]):
+        return RiscvSubroutineEmitter(self, info, params, arrays)
 
     # return all the string stored in asmcodeprinter
     def emitEnd(self):
@@ -92,15 +95,11 @@ class RiscvAsmEmitter(AsmEmitter):
                 self.seq.append(Riscv.Binary(BinaryOp.SUB, instr.dst, instr.lhs, instr.rhs))
                 self.seq.append(Riscv.Unary(UnaryOp.SNEZ, instr.dst, instr.dst))
             elif instr.op == BinaryOp.LEQ:
-                self.seq.append(Riscv.Binary(BinaryOp.SUB, instr.dst, instr.lhs, instr.rhs))
+                self.seq.append(Riscv.Binary(BinaryOp.SGT, instr.dst, instr.lhs, instr.rhs))
                 self.seq.append(Riscv.Unary(UnaryOp.SEQZ, instr.dst, instr.dst))
-                self.seq.append(Riscv.Binary(BinaryOp.SLT, instr.lhs, instr.lhs, instr.rhs))
-                self.seq.append(Riscv.Binary(BinaryOp.OR, instr.dst, instr.dst, instr.lhs))
             elif instr.op == BinaryOp.GEQ:
-                self.seq.append(Riscv.Binary(BinaryOp.SUB, instr.dst, instr.lhs, instr.rhs))
+                self.seq.append(Riscv.Binary(BinaryOp.SLT, instr.dst, instr.lhs, instr.rhs))
                 self.seq.append(Riscv.Unary(UnaryOp.SEQZ, instr.dst, instr.dst))
-                self.seq.append(Riscv.Binary(BinaryOp.SGT, instr.lhs, instr.lhs, instr.rhs))
-                self.seq.append(Riscv.Binary(BinaryOp.OR, instr.dst, instr.dst, instr.lhs))
             elif instr.op == BinaryOp.AND:
                 self.seq.append(Riscv.Unary(UnaryOp.SNEZ, instr.lhs, instr.lhs))
                 self.seq.append(Riscv.Unary(UnaryOp.SNEZ, instr.rhs, instr.rhs))
@@ -135,13 +134,16 @@ class RiscvAsmEmitter(AsmEmitter):
 
         def visitLoad(self, instr: Load) -> None:
             self.seq.append(Riscv.Load(instr.dst, instr.base, instr.offset))
-        # in step11, you need to think about how to store the array 
+
+        # in step11, you need to think about how to store the array
+        def visitAlloc(self, instr: Alloc) -> None:
+            self.seq.append(Riscv.LoadArray(instr.dst))
 """
 RiscvAsmEmitter: an SubroutineEmitter for RiscV
 """
 
 class RiscvSubroutineEmitter(SubroutineEmitter):
-    def __init__(self, emitter: RiscvAsmEmitter, info: SubroutineInfo, params: list[Temp]) -> None:
+    def __init__(self, emitter: RiscvAsmEmitter, info: SubroutineInfo, params: list[Temp], arrays: list[tuple[Temp, int]]) -> None:
         super().__init__(emitter, info)
         
         # + 4 is for the RA reg, + 4 is for the FP reg, so + 8
@@ -156,10 +158,15 @@ class RiscvSubroutineEmitter(SubroutineEmitter):
 
         self.printer.printLabel(info.funcLabel)
 
+        # in step9, step11 you can compute the offset of local array and parameters here
         # parameters of this function
         self.params = params
-        # in step9, step11 you can compute the offset of local array and parameters here
-        # offset to FP of each parameter
+        # offset to SP of each local array of this function
+        self.arraySPOffsets = {}
+        for addrTemp, size in arrays:
+            self.arraySPOffsets[addrTemp.index] = self.nextLocalOffset
+            self.nextLocalOffset += size
+        # offset to FP of each parameter of this function
         self.paramFPOffsets = {param.index : 4 * i for i, param in enumerate(self.params[8:])}
 
     def emitComment(self, comment: str) -> None:

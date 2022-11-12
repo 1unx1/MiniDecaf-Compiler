@@ -97,6 +97,11 @@ class FuncVisitor:
     def visitStoreInMem(self, src: Temp, base: Temp, offset: int) -> None:
         self.func.add(Store(src, base, offset))
 
+    def visitAlloc(self, size: int) -> Temp:
+        temp = self.freshTemp()
+        self.func.add(Alloc(temp, size))
+        return temp
+
     def visitMemo(self, content: str) -> None:
         self.func.add(Memo(content))
 

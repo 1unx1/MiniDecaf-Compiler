@@ -36,8 +36,8 @@ class BruteRegAlloc(RegAlloc):
             reg.used = False
         self.regIndex = 0 # index of allocatableRegs
 
-    def accept(self, graph: CFG, info: SubroutineInfo, params: list[Temp]) -> None:
-        subEmitter = self.emitter.emitSubroutine(info, params)
+    def accept(self, graph: CFG, info: SubroutineInfo, params: list[Temp], arrays: list[tuple[Temp, int]]) -> None:
+        subEmitter = self.emitter.emitSubroutine(info, params, arrays)
         for bb in graph.iterator():
             # you need to think more here
             # maybe we don't need to alloc regs for all the basic blocks
@@ -73,6 +73,8 @@ class BruteRegAlloc(RegAlloc):
             subEmitter.emitComment(str(loc.instr))
             if isinstance(loc.instr, Riscv.Call):
                 self.allocForCall(loc, subEmitter)
+            elif isinstance(loc.instr, Riscv.LoadArray):
+                self.allocForLoadArray(loc, subEmitter)
             else:
                 self.allocForLoc(loc, subEmitter)
 
@@ -130,6 +132,11 @@ class BruteRegAlloc(RegAlloc):
         self.unbind(Riscv.A0.temp)
         if tempForA0:
             self.bind(tempForA0, Riscv.A0)
+
+    def allocForLoadArray(self, loc: Loc, subEmitter: SubroutineEmitter):
+        reg = self.allocRegFor(loc.instr.dst, False, loc.liveIn, subEmitter)
+        subEmitter.emitNative(Riscv.LoadImm(reg, subEmitter.arraySPOffsets[loc.instr.dst.index]))
+        self.allocForLoc(loc, subEmitter)
 
     def allocForLoc(self, loc: Loc, subEmitter: SubroutineEmitter):
         instr = loc.instr

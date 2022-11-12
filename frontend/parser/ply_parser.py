@@ -271,18 +271,40 @@ def p_opt_expression_empty(p):
     p[0] = NULL
 
 
+def p_indexes(p):
+    """
+    indexes : indexes LSquareBracket Integer RSquareBracket
+    """
+    p[1].append(p[3])
+    p[0] = p[1]
+
+
+def p_index_empty(p):
+    """
+    indexes : empty
+    """
+    p[0] = []
+
+
+def p_indexExpr(p):
+    """
+    postfix : postfix LSquareBracket expression RSquareBracket
+    """
+    p[0] = IndexExpr(p[1], p[3])
+
+
 def p_declaration(p):
     """
-    declaration : type Identifier
+    declaration : type Identifier indexes
     """
-    p[0] = Declaration(p[1], p[2])
+    p[0] = Declaration(p[1], p[2], p[3])
 
 
 def p_declaration_init(p):
     """
-    declaration : type Identifier Assign expression
+    declaration : type Identifier indexes Assign expression
     """
-    p[0] = Declaration(p[1], p[2], p[4])
+    p[0] = Declaration(p[1], p[2], p[3], p[5])
 
 
 def p_expression_precedence(p):
@@ -316,7 +338,7 @@ def p_unary_expression(p):
 
 def p_binary_expression(p):
     """
-    assignment : Identifier Assign expression
+    assignment : unary Assign expression
     logical_or : logical_or Or logical_and
     logical_and : logical_and And bit_or
     bit_or : bit_or BitOr xor
