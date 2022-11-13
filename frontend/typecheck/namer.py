@@ -21,7 +21,7 @@ The namer phase: resolve all symbols defined in the abstract syntax tree and sto
 
 class Namer(Visitor[ScopeStack, None]):
     def __init__(self) -> None:
-        self.indexExprDim = 0
+        pass
 
     # Entry of this phase
     def transform(self, program: Program) -> Program:
@@ -114,23 +114,24 @@ class Namer(Visitor[ScopeStack, None]):
                 argument.accept(self, ctx)
 
     def visitIndexExpr(self, indexExpr: IndexExpr, ctx: ScopeStack) -> None:
-        self.indexExprDim += 1
-        if isinstance(indexExpr.base, Identifier):
-            arraySymbol = ctx.lookup(indexExpr.base.value)
-            if not arraySymbol:
-                raise DecafUndefinedVarError(indexExpr.base.value)
-            if not isinstance(arraySymbol, VarSymbol) or not isinstance(
-                arraySymbol.type, ArrayType):
-                raise DecafBadIndexError(indexExpr.base.value)
-            if self.indexExprDim > arraySymbol.type.dim:
-                raise DecafBadIndexError(indexExpr.base.value)
-            elif self.indexExprDim < arraySymbol.type.dim:
-                raise DecafTypeMismatchError()
-            self.indexExprDim = 0
-            indexExpr.base.setattr('symbol', arraySymbol)
-        else:
-            indexExpr.base.accept(self, ctx)
-        indexExpr.index.accept(self, ctx)
+        expr = indexExpr
+        indexExprDim = 1
+        expr.index.accept(self, ctx)
+        while not isinstance(expr.base, Identifier):
+            expr = expr.base
+            indexExprDim += 1
+            expr.index.accept(self, ctx)
+        arraySymbol = ctx.lookup(expr.base.value)
+        if not arraySymbol:
+            raise DecafUndefinedVarError(expr.base.value)
+        if not isinstance(arraySymbol, VarSymbol) or not isinstance(
+            arraySymbol.type, ArrayType):
+            raise DecafBadIndexError(expr.base.value)
+        if indexExprDim > arraySymbol.type.dim:
+            raise DecafBadIndexError(expr.base.value)
+        elif indexExprDim < arraySymbol.type.dim:
+            raise DecafTypeMismatchError()
+        expr.base.setattr('symbol', arraySymbol)
 
     def visitBlock(self, block: Block, ctx: ScopeStack) -> None:
         if block.func_body:
