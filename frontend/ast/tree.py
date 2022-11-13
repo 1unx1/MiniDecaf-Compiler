@@ -111,16 +111,18 @@ class Parameter(Node):
     AST node that represents a parameter.
     """
 
-    def __init__(self, var_t: TypeLiteral, ident: Identifier) -> None:
+    def __init__(self, var_t: TypeLiteral, ident: Identifier, isArray: bool, indexes: list[IntLiteral]) -> None:
         super().__init__('parameter')
         self.var_t = var_t
         self.ident = ident
+        self.isArray = isArray
+        self.indexes = indexes or NULL
 
     def __getitem__(self, key: int) -> Node:
-        return (self.var_t, self.ident)[key]
+        return (self.var_t, self.ident, self.isArray, self.indexes)[key]
 
     def __len__(self) -> int:
-        return 2
+        return 4
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitParameter(self, ctx)
@@ -314,18 +316,20 @@ class Declaration(Node):
         ident: Identifier,
         indexes: list[IntLiteral],
         init_expr: Optional[Expression] = None,
+        init_list: Optional[list[IntLiteral]] = None
     ) -> None:
         super().__init__("declaration")
         self.var_t = var_t
         self.ident = ident
         self.indexes = indexes or NULL
         self.init_expr = init_expr or NULL
+        self.init_list = init_list or NULL
 
     def __getitem__(self, key: int) -> Node:
-        return (self.var_t, self.ident, self.indexes, self.init_expr)[key]
+        return (self.var_t, self.ident, self.indexes, self.init_expr, self.init_list)[key]
 
     def __len__(self) -> int:
-        return 4
+        return 5
 
     def accept(self, v: Visitor[T, U], ctx: T):
         return v.visitDeclaration(self, ctx)

@@ -37,7 +37,11 @@ class RiscvAsmEmitter(AsmEmitter):
                 if isinstance(initValue, int): # global variable
                     self.printer.println('.word %s' % (initValue))
                 else: # global array
-                    self.printer.println('.zero %s' % (len(initValue) * 4))
+                    if isinstance(initValue, list):
+                        for integer in initValue:
+                            self.printer.println('.word %s' % (integer))
+                    else:
+                        self.printer.println('.zero %s' % (initValue[1] * 4))
                 self.printer.println("")
         self.printer.println(".text")
         self.printer.println(".global main")

@@ -110,7 +110,21 @@ def p_parameter(p):
     """
     parameter : type Identifier
     """
-    p[0] = Parameter(p[1], p[2])
+    p[0] = Parameter(p[1], p[2], False, [])
+
+
+def p_parameter_array_empty(p):
+    """
+    parameter : type Identifier LSquareBracket RSquareBracket indexes
+    """
+    p[0] = Parameter(p[1], p[2], True, p[5])
+
+
+def p_parameter_array_nonempty(p):
+    """
+    parameter : type Identifier LSquareBracket Integer RSquareBracket indexes
+    """
+    p[0] = Parameter(p[1], p[2], True, p[6])
 
 
 def p_call(p):
@@ -300,11 +314,47 @@ def p_declaration(p):
     p[0] = Declaration(p[1], p[2], p[3])
 
 
-def p_declaration_init(p):
+def p_declaration_init_var(p):
     """
-    declaration : type Identifier indexes Assign expression
+    declaration : type Identifier Assign expression
     """
-    p[0] = Declaration(p[1], p[2], p[3], p[5])
+    p[0] = Declaration(p[1], p[2], [], p[4], [])
+
+
+def p_integer_list(p):
+    """
+    integer_list : integer_list_nonempty
+    """
+    p[0] = p[1]
+
+
+def p_integer_list_empty(p):
+    """
+    integer_list : empty
+    """
+    p[0] = []
+
+
+def p_integer_list_nonempty(p):
+    """
+    integer_list_nonempty : integer_list_nonempty Comma Integer
+    """
+    p[1].append(p[3])
+    p[0] = p[1]
+
+
+def p_integer_list_one(p):
+    """
+    integer_list_nonempty : Integer
+    """
+    p[0] = [p[1]]
+
+
+def p_declaration_init_array(p):
+    """
+    declaration : type Identifier indexes Assign LBrace integer_list RBrace
+    """
+    p[0] = Declaration(p[1], p[2], p[3], NULL, p[6])
 
 
 def p_expression_precedence(p):

@@ -51,7 +51,12 @@ class Namer(Visitor[ScopeStack, None]):
             else: # not declared, declare and define at the same time
                 funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), True)
                 for param in func.parameter_list:
-                    funcSymbol.addParaType(param.var_t.type)
+                    if not param.isArray:
+                        funcSymbol.addParaType(param.var_t.type)
+                    else:
+                        funcSymbol.addParaType(ArrayType.multidim(
+                            param.var_t.type, 1, *[index.value for index in param.indexes]
+                        ))
                 ctx.declare(funcSymbol)
             ctx.open(Scope(ScopeKind.LOCAL))
             for param in func.parameter_list:
@@ -68,15 +73,26 @@ class Namer(Visitor[ScopeStack, None]):
             # first declaration
             funcSymbol = FuncSymbol(func.ident.value, func.ret_t.type, ctx.currentScope(), False)
             for param in func.parameter_list:
-                funcSymbol.addParaType(param.var_t.type)
+                if not param.isArray:
+                    funcSymbol.addParaType(param.var_t.type)
+                else:
+                    funcSymbol.addParaType(ArrayType.multidim(
+                        param.var_t.type, 1, *[index.value for index in param.indexes]
+                    ))
             ctx.declare(funcSymbol)
 
     def visitParameter(self, param: Parameter, ctx: ScopeStack) -> None:
         if ctx.findConflict(param.ident.value):
             raise DecafDeclConflictError(param.ident.value)
-        symbol = VarSymbol(param.ident.value, param.var_t.type)
+        type = param.var_t.type if not param.isArray else ArrayType.multidim(
+            param.var_t.type, 1, *[index.value for index in param.indexes])
+        symbol = VarSymbol(param.ident.value, type)
         ctx.declare(symbol)
         param.setattr('symbol', symbol)
+        if param.isArray:
+            for index in param.indexes:
+                if index.value <= 0:
+                    raise DecafBadArraySizeError()
 
     def visitCall(self, call: Call, ctx: ScopeStack) -> None:
         funcSymbol = ctx.lookup(call.ident.value)
@@ -84,8 +100,18 @@ class Namer(Visitor[ScopeStack, None]):
             raise DecafUndefinedFuncError(call.ident.value)
         if len(call.argument_list) != funcSymbol.parameterNum:
             raise DecafBadFuncCallError(call.ident.value)
-        for argument in call.argument_list:
-            argument.accept(self, ctx)
+        for i, argument in enumerate(call.argument_list):
+            if isinstance(argument, Identifier):
+                varSymbol = ctx.lookup(argument.value)
+                if not varSymbol or not isinstance(varSymbol, VarSymbol):
+                    raise DecafUndefinedVarError(argument.value)
+                if isinstance(funcSymbol.getParaType(i), ArrayType) or isinstance(varSymbol.type, ArrayType):
+                    if not isinstance(funcSymbol.getParaType(i), ArrayType) or not isinstance(
+                        varSymbol.type, ArrayType) or funcSymbol.getParaType(i).indexed != varSymbol.type.indexed:
+                        raise DecafTypeMismatchError()
+                argument.setattr('symbol', varSymbol)
+            else:
+                argument.accept(self, ctx)
 
     def visitIndexExpr(self, indexExpr: IndexExpr, ctx: ScopeStack) -> None:
         self.indexExprDim += 1
@@ -196,7 +222,15 @@ class Namer(Visitor[ScopeStack, None]):
             for index in decl.indexes:
                 if index.value <= 0:
                     raise DecafBadArraySizeError()
-        if decl.init_expr != NULL:
+            if decl.init_list != NULL:
+                if len(decl.init_list) * 4 > type.size:
+                    raise DecafTypeMismatchError()
+                symbol.initValue = [integer.value for integer in decl.init_list]
+                symbol.initValue.extend([0] * int(type.size / 4 - len(decl.init_list)))
+            else:
+                # 0 means ZERO initialization, which is used in TACGen.visitDeclaration, check 'if 0 in symbol.initValue'
+                symbol.initValue = (0, int(type.size / 4))
+        elif decl.init_expr != NULL:
             decl.init_expr.accept(self, ctx)
             if isGlobal and not isinstance(decl.init_expr, IntLiteral):
                 raise DecafGlobalVarBadInitValueError(decl.ident.value)
@@ -205,10 +239,13 @@ class Namer(Visitor[ScopeStack, None]):
         """
         1. Refer to the implementation of visitBinary.
         """
-        try:
+        if not isinstance(expr.lhs, Identifier):
+            try:
+                expr.lhs.accept(self, ctx)
+            except DecafTypeMismatchError:
+                raise DecafBadAssignTypeError()
+        else:
             expr.lhs.accept(self, ctx)
-        except DecafTypeMismatchError:
-            raise DecafBadAssignTypeError()
         expr.rhs.accept(self, ctx)
 
     def visitUnary(self, expr: Unary, ctx: ScopeStack) -> None:

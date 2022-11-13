@@ -37,8 +37,6 @@ class TACGen(Visitor[FuncVisitor, None]):
             globalSymbol = decl.getattr('symbol')
             if decl.init_expr != NULL:
                 globalSymbol.setInitValue(decl.init_expr.value)
-            elif isinstance(globalSymbol.type, ArrayType): # default zero initialization, both variable and array
-                globalSymbol.initValue = [globalSymbol.initValue] * int(globalSymbol.type.size / 4)
             globalSymbolNameValues[globalSymbol.name] = globalSymbol.initValue
         # Remember to call pw.visitEnd before finishing the translation phase.
         return pw.visitEnd(globalSymbolNameValues)
@@ -62,7 +60,7 @@ class TACGen(Visitor[FuncVisitor, None]):
         arraySymbol = expr.base.getattr('symbol')
         if arraySymbol.isGlobal:
             arraySymbol.temp = mv.visitLoadSymbol(arraySymbol.name)
-        lengths = [0]
+        lengths = []
         type = arraySymbol.type
         while isinstance(type, ArrayType):
             lengths.append(type.length)
@@ -103,7 +101,10 @@ class TACGen(Visitor[FuncVisitor, None]):
         symbol = ident.getattr('symbol')
         if symbol.isGlobal:
             base = mv.visitLoadSymbol(symbol.name)
-            symbol.temp = mv.visitLoadInMem(base, 0)
+            if not isinstance(symbol.type, ArrayType):
+                symbol.temp = mv.visitLoadInMem(base, 0)
+            else:
+                symbol.temp = base
         ident.setattr('val', symbol.temp)
 
     def visitDeclaration(self, decl: Declaration, mv: FuncVisitor) -> None:
@@ -117,6 +118,13 @@ class TACGen(Visitor[FuncVisitor, None]):
             symbol.temp = mv.freshTemp()
         else:
             symbol.temp = mv.visitAlloc(symbol.type.size)
+            offset = 0
+            if 0 in symbol.initValue:
+                zeroTemp = mv.visitLoad(0)
+            for integer in symbol.initValue:
+                temp = mv.visitLoad(integer) if integer != 0 else zeroTemp
+                mv.visitStoreInMem(temp, symbol.temp, offset)
+                offset += 4
             mv.func.arrays.append((symbol.temp, symbol.type.size))
         if decl.init_expr != NULL:
             decl.init_expr.accept(self, mv)
