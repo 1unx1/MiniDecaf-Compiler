@@ -84,12 +84,6 @@ class BruteRegAlloc(RegAlloc):
             self.allocForLoc(bb.locs[len(bb.locs) - 1], subEmitter)
 
     def allocForCall(self, loc: Loc, subEmitter: SubroutineEmitter):
-        # store caller save regs
-        callerSaveRegs = []
-        for reg in self.emitter.callerSaveRegs:
-            if reg.occupied and reg.temp.index in loc.liveOut:
-                subEmitter.emitStoreToStack(reg)
-                callerSaveRegs.append(reg)
         # pass the parameters by stack
         for arg in reversed(loc.instr.args):
             reg = self.allocRegFor(arg, True, loc.liveIn, subEmitter)
@@ -98,6 +92,12 @@ class BruteRegAlloc(RegAlloc):
             subEmitter.emitNative(Riscv.NativeStoreWord(reg, Riscv.SP, 0))
             # change offsets due to the change of SP
             subEmitter.changeOffset(4)
+        # store caller save regs, which must be done after allocRegFor args' temps!
+        callerSaveRegs = []
+        for reg in self.emitter.callerSaveRegs:
+            if reg.occupied and reg.temp.index in loc.liveOut:
+                subEmitter.emitStoreToStack(reg)
+                callerSaveRegs.append(reg)
         # pass the parameters by regs
         for i in range(len(loc.instr.args[:8])):
             # pop the parameters to arg regs
