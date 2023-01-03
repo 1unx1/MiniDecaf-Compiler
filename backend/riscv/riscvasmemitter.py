@@ -181,6 +181,8 @@ class RiscvSubroutineEmitter(SubroutineEmitter):
         self.nextLocalOffset += delta
         for i in self.offsets:
             self.offsets[i] += delta
+        for i in self.arraySPOffsets:
+            self.arraySPOffsets[i] += delta
 
     # store some temp to stack
     # usually happen when reaching the end of a basicblock
